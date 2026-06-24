@@ -29,7 +29,6 @@ export default function AuthForm() {
       setErrors((prev) => ({ ...prev, form: "" }));
       router.replace("/"); // history ["/", "/"]
     } catch (err) {
-      console.error("Error:", err.message);
       setErrors((prev) => ({ ...prev, form: err.message }));
     }
   }
@@ -41,29 +40,22 @@ export default function AuthForm() {
       password,
     };
 
-    try {
-      const response = await fetch("http://localhost:8080/api/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+    const response = await fetch("http://localhost:8080/api/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    });
 
-      if (!response.ok) {
-        const jsonResponse = await response.json();
-        console.log("RESPONSE.MESSAGE:", jsonResponse.message);
-
-        throw new Error(jsonResponse.message);
-      }
-
-      const data = await response.json();
-      console.log("Signed up:", data);
-      setErrors((prev) => ({ ...prev, form: "" }));
-    } catch (err) {
-      console.error("Error:", err.message);
-      setErrors((prev) => ({ ...prev, form: err.message }));
+    if (!response.ok) {
+      const jsonResponse = await response.json();
+      throw new Error(jsonResponse.error || "Signup failed");
     }
+
+    const data = await response.json();
+    setErrors((prev) => ({ ...prev, form: "" }));
+    return data;
   }
 
   async function handleSignup(e) {
@@ -80,10 +72,13 @@ export default function AuthForm() {
     setErrors((prev) => ({ ...prev, confirm: "" }));
 
     // make the post request
-    sendSignupRequest();
-
-    // The values you need are already in state:
-    console.log("signup submit", { name, email, password, confirm });
+    try {
+      await sendSignupRequest();
+      await login(email, password);
+      router.replace("/");
+    } catch (err) {
+      setErrors((prev) => ({ ...prev, form: err.message }));
+    }
   }
 
   return (
